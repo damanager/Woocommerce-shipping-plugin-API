@@ -30,3 +30,73 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
  $this->enabled = isset($this->settings['enabled']) ? $this->settings['enabled'] : 'yes';
  $this->title = isset($this->settings['title']) ? $this->settings['title'] : __('dashikiwears Shipping', 'dashikiwears');
  }
+ /**
+ Load the settings API
+ */
+function init()
+{
+$this->init_form_fields();
+$this->init_settings();
+add_action('woocommerce_update_options_shipping_' . $this->id, array($this, 'process_admin_options'));
+}
+function init_form_fields()
+{
+$this->form_fields = array(
+'enabled' => array(
+'title' => __('Enable', 'dashikiwears'),
+'type' => 'checkbox',
+'default' => 'yes'
+),
+'weight' => array(
+'title' => __('Weight (kg)', 'dashikiwears'),
+'type' => 'number',
+'default' => 50
+),
+'title' => array(
+'title' => __('Title', 'dashikiwears'),
+'type' => 'text',
+'default' => __('dashikiwears Shipping', 'dashikiwears')
+),
+);
+}
+public function dashikiwears_shipping_calculation($package)
+ {
+ $weight = 0;
+ $cost = 0;
+ $country = $package["destination"]["country"];
+ foreach ($package['contents'] as $item_id => $values) {
+ $_product = $values['data'];
+ $weight = $weight + $_product->get_weight() * $values['quantity'];
+ }
+ $weight = wc_get_weight($weight, 'kg');
+ if ($weight <= 5) {
+ $cost = 0;
+ } elseif ($weight <= 25) {
+ $cost = 5;
+ } elseif ($weight <= 45) {
+ $cost = 10;
+ } else {
+ $cost = 15;
+ }
+ $countryZones = array(
+ 'EU' => 2,
+ 'GB' => 2,
+ 'US' => 3
+ );
+ $zonePrices = array(
+ 2 => 50,
+ 3 => 70
+ );
+ $zoneFromCountry = $countryZones[$country];
+ $priceFromZone = $zonePrices[$zoneFromCountry];
+ $cost += $priceFromZone;
+ $rate = array(
+ 'id' => $this->id,
+ 'label' => $this->title,
+ 'cost' => $cost
+ );
+ $this->add_rate($rate);
+ }
+ }
+ }
+ }
